@@ -32,12 +32,22 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "8635268994:AAEK1DkLk_sX11h9kdnq4QtBJh8G
 CHANNEL_ID = int(os.environ.get("CHANNEL_ID", -1004036970586))
 
 def _fix_mongo_uri(uri: str) -> str:
-    m = re.match(r"(mongodb(?:\+srv)?://)([^:]+):(.+?)@(.+)", uri)
-    if m:
-        scheme, user, password, rest = m.groups()
-        password = password.replace("%40", "@")
-        return f"{scheme}{quote_plus(user)}:{quote_plus(password)}@{rest}"
-    return uri
+    from urllib.parse import unquote
+    if "://" not in uri:
+        return uri
+    scheme, rest = uri.split("://", 1)
+    at_idx = rest.rfind("@")
+    if at_idx == -1:
+        return uri
+    userinfo = rest[:at_idx]
+    host = rest[at_idx + 1:]
+    colon_idx = userinfo.find(":")
+    if colon_idx == -1:
+        return uri
+    user = userinfo[:colon_idx]
+    password = userinfo[colon_idx + 1:]
+    password = unquote(password)
+    return f"{scheme}://{quote_plus(user)}:{quote_plus(password)}@{host}"
 
 MONGO_URI = _fix_mongo_uri(os.environ.get("MONGO_URI", "mongodb+srv://admin:17204@305@vixenstars.foeqljn.mongodb.net/?appName=VixenStars"))
 
